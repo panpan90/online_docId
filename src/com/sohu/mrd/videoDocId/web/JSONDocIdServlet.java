@@ -11,7 +11,9 @@ import org.apache.log4j.Logger;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.sohu.mrd.videoDocId.model.NewsInfo;
 import com.sohu.mrd.videoDocId.service.GenerateDocIdServiceByRedis;
+import com.sohu.mrd.videoDocId.service.GenerateNewsDocIdService;
 /**
  * @author   Jin Guopan
  * @version 2016-12-16
@@ -42,8 +44,11 @@ public class JSONDocIdServlet extends HttpServlet {
 			String media ="";
 			String publish_time = "";
 			String title ="";
+			String introduce="";
+			String sort="";
+			String isGroupImage="";
 			try {
-				JSONObject jsonObject = JSON.parseObject(json);
+				 JSONObject jsonObject = JSON.parseObject(json);
 				 category = jsonObject.getString("category");
 				 url = jsonObject.getString("url");
 				 source = jsonObject.getString("source");
@@ -53,22 +58,53 @@ public class JSONDocIdServlet extends HttpServlet {
 				 media = jsonObject.getString("media");
 				 publish_time = jsonObject.getString("publish_time");
 				 title = jsonObject.getString("title");
+				 introduce=jsonObject.getString("introduce");
+				 sort=jsonObject.getString("sort");
+				 isGroupImage=jsonObject.getString("isGroupImage");
 			} catch (Exception e) {
 				jsonFlag=false;
 				LOG.error("前端接受的json解析错误 ",e);
 			}
-			LOG.info("前端接受的参数  title"+title+"\t"+"content"+content+"url "+url);
-			LOG.info("解析后json的数据 category"+category+" url"+url+"source "+source+"content "+content
-					+"content_length "+content_length+" title_length "+title_length +" media "+media 
-					+"publish_time "
-					+publish_time +"title "+title);
+			LOG.info("前端接受的参数  title"+title+"\t"+"content"+content+"url "+url+"category "+category+"introduce "+
+					introduce+" sort"+sort+" isGroupImage"+isGroupImage);
 			if(jsonFlag)
 			{
 				if(!url.trim().equals("")&&!title.trim().equals(""))
 				{
-					GenerateDocIdServiceByRedis  generateDocIdService =GenerateDocIdServiceByRedis.getInstance();
-					String docId=generateDocIdService.getDocId(url, title, content);
-					result.put("docId", docId);
+					if(!category.trim().equals(""))
+					{
+						if(category.equals("1")) //视频排重
+						{
+							LOG.info("category 为 "+category+" 开始进行视频排重");
+							GenerateDocIdServiceByRedis  generateDocIdService =GenerateDocIdServiceByRedis.getInstance();
+							String docId=generateDocIdService.getDocId(url, title, content);
+							result.put("docId", docId);
+						}else if(category.equals("0"))//新闻排重
+						{
+							LOG.info("category为  "+category+" 开始进行新闻排重");
+							GenerateNewsDocIdService  generateNewsDocIdService = GenerateNewsDocIdService.getInstance();
+							NewsInfo newsInfo = new NewsInfo();
+							newsInfo.setCategory(category);
+							newsInfo.setContent(content);
+							boolean groupImage = false;
+							if(isGroupImage!=null&&isGroupImage.equals("1"))
+							{
+								groupImage=true;
+							}
+							newsInfo.setGroupImage(groupImage);
+							newsInfo.setUrl(url);
+							newsInfo.setTitle(title);
+							newsInfo.setIntroduce(introduce);
+							String docId=generateNewsDocIdService.getDocId(newsInfo);
+							result.put("docId", docId);
+						}
+						
+					}else{
+						// url 或者 title 为空
+						result.put("status", "fail");
+						result.put("msg", "category is empty");
+					}
+					
 				}else{
 					// url 或者 title 为空
 					result.put("status", "fail");

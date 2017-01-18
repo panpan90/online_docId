@@ -25,21 +25,31 @@ public class SendURL {
 		String ngix="http://service1.mrd.sohu.com/summary/getsummary";
 		String ngixDocId="http://10.10.120.135:8080/online_docId/getDocId";
 		String ngixDocId2="http://service1.mrd.sohuno.com/online_docId/getDocId";
-		
-		for(int i=0;i<50;i++)
-		{
-			JSONObject  json=new JSONObject();
-			json.put("url", "http://www.baidu.com"+i);
-			json.put("title", "  我是标题"+i);
-			json.put("content", "内容");
-			HashMap<String,String>  map=new HashMap<String,String>();
-			map.put("json", json.toJSONString());
-			long startTime=System.currentTimeMillis();
-			String result=HttpClientUtil.doPost(myurl, map, "utf-8");
-			long endTime=System.currentTimeMillis();
-			System.out.println("时间为 "+(endTime-startTime));
-			LOG.info("result "+result);
-		}
+		JSONObject  json=new JSONObject();
+		json.put("url", "http://www.baidu.com");
+		json.put("title", "  我是标题");
+		json.put("content", "内容");
+		HashMap<String,String>  map=new HashMap<String,String>();
+		map.put("json", json.toJSONString());
+		long startTime=System.currentTimeMillis();
+		String result=HttpClientUtil.doPost(ngixDocId, map, "utf-8");
+		long endTime=System.currentTimeMillis();
+		System.out.println("时间为 "+(endTime-startTime));
+		LOG.info("result "+result);
+//		for(int i=0;i<50;i++)
+//		{
+//			JSONObject  json=new JSONObject();
+//			json.put("url", "http://www.baidu.com"+i);
+//			json.put("title", "  我是标题"+i);
+//			json.put("content", "内容");
+//			HashMap<String,String>  map=new HashMap<String,String>();
+//			map.put("json", json.toJSONString());
+//			long startTime=System.currentTimeMillis();
+//			String result=HttpClientUtil.doPost(ngixDocId, map, "utf-8");
+//			long endTime=System.currentTimeMillis();
+//			System.out.println("时间为 "+(endTime-startTime));
+//			LOG.info("result "+result);
+//		}
 //		JSONObject  resultJson=JSON.parseObject(result);
 //		String docId= resultJson.getString("docId");
 //		LOG.info("docId "+docId);
