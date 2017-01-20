@@ -28,7 +28,6 @@ public class JSONDocIdServlet extends HttpServlet {
 			throws ServletException, IOException {
 		String json = request.getParameter("json"); //接受前端 json 数据
 		boolean jsonFlag=true;
-		LOG.info("前端接受的 json为  "+json);
 		JSONObject result = new JSONObject();
 		result.put("status", "success");
 		if (json.trim().equals("") || json ==null) {
@@ -63,10 +62,14 @@ public class JSONDocIdServlet extends HttpServlet {
 				 isGroupImage=jsonObject.getString("isGroupImage");
 			} catch (Exception e) {
 				jsonFlag=false;
-				LOG.error("前端接受的json解析错误 ",e);
+				LOG.error("前端 json解析错误 ",e);
 			}
-			LOG.info("前端接受的参数  title"+title+"\t"+"content"+content+"url "+url+"category "+category+"introduce "+
+			LOG.info(" title"+title+"\t"+"url "+url+"category "+category+"introduce "+
 					introduce+" sort"+sort+" isGroupImage"+isGroupImage);
+			if(category.equals("1"))
+			{
+				LOG.info("视频内容为 "+content);
+			}
 			if(jsonFlag)
 			{
 				if(!url.trim().equals("")&&!title.trim().equals(""))
@@ -75,13 +78,12 @@ public class JSONDocIdServlet extends HttpServlet {
 					{
 						if(category.equals("1")) //视频排重
 						{
-							LOG.info("category 为 "+category+" 开始进行视频排重");
+							LOG.info("category 为 "+category+" 视频docId");
 							GenerateDocIdServiceByRedis  generateDocIdService =GenerateDocIdServiceByRedis.getInstance();
 							String docId=generateDocIdService.getDocId(url, title, content);
 							result.put("docId", docId);
-						}else if(category.equals("0"))//新闻排重
+						}else if(category.equals("0") ||category.equals("2") )//0 新闻排重 2 表示微信
 						{
-							LOG.info("category为  "+category+" 开始进行新闻排重");
 							GenerateNewsDocIdService  generateNewsDocIdService = GenerateNewsDocIdService.getInstance();
 							NewsInfo newsInfo = new NewsInfo();
 							newsInfo.setCategory(category);

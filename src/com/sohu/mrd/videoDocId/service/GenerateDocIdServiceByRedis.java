@@ -30,7 +30,7 @@ public class GenerateDocIdServiceByRedis {
 	{
 		return sigletonHolder.instance;
 	}
-	public String getDocId(String url, String title,String content){
+	public synchronized String getDocId(String url, String title,String content){
 		//增加标题索引
 		String titleIndexDocId = generateDocId(url);
 		TitleDuplicate titleDuplicate = new TitleDuplicate();

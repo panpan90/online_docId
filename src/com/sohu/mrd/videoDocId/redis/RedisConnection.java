@@ -18,7 +18,7 @@ public class RedisConnection {
         config.setTimeBetweenEvictionRunsMillis(30000);
         codisLocalClient = CodisLocalClient
                 .create()
-                //.clusterName("mrd_redis_cluster_1")
+                .clusterName("mrd_redis_cluster_1")
                 .build();         // 以默认方式创建测试环境下的codis客户端
     }
 }
