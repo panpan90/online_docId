@@ -1,0 +1,4 @@
+## 从oid 取得新闻
+http://service.k.sohu.com/server/interface/getnews.go?newsids=160860292 
+通过docId取得 相应的 oid
+get 'ID_TRANS_TABLE_HBase','00002bbbd3a462ca-676f857a2444d6f0'
