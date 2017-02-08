@@ -1,6 +1,7 @@
 package com.sohu.mrd.videoDocId.web;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -11,9 +12,11 @@ import org.apache.log4j.Logger;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.sohu.mrd.videoDocId.model.FilterReason;
 import com.sohu.mrd.videoDocId.model.NewsInfo;
 import com.sohu.mrd.videoDocId.service.GenerateDocIdServiceByRedis;
 import com.sohu.mrd.videoDocId.service.GenerateNewsDocIdService;
+import com.sohu.mrd.videoDocId.utils.HttpClientUtil;
 /**
  * @author   Jin Guopan
  * @version 2016-12-16
@@ -46,6 +49,7 @@ public class JSONDocIdServlet extends HttpServlet {
 			String introduce="";
 			String sort="";
 			String isGroupImage="";
+			String imageCount="";
 			try {
 				 JSONObject jsonObject = JSON.parseObject(json);
 				 category = jsonObject.getString("category");
@@ -60,12 +64,13 @@ public class JSONDocIdServlet extends HttpServlet {
 				 introduce=jsonObject.getString("introduce");
 				 sort=jsonObject.getString("sort");
 				 isGroupImage=jsonObject.getString("isGroupImage");
+				 imageCount=jsonObject.getString("imageCount");
 			} catch (Exception e) {
 				jsonFlag=false;
 				LOG.error("前端 json解析错误 ",e);
 			}
 			LOG.info(" title"+title+"\t"+"url "+url+"category "+category+"introduce "+
-					introduce+" sort"+sort+" isGroupImage"+isGroupImage);
+					introduce+" sort "+sort+" isGroupImage"+isGroupImage +" media "+media+" imageCount "+imageCount);
 			if(category.equals("1"))
 			{
 				LOG.info("视频内容为 "+content);
@@ -78,7 +83,7 @@ public class JSONDocIdServlet extends HttpServlet {
 					{
 						if(category.equals("1")) //视频排重
 						{
-							LOG.info("category 为 "+category+" 视频docId");
+							LOG.info("category 为 "+category+" 视频docId start");
 							GenerateDocIdServiceByRedis  generateDocIdService =GenerateDocIdServiceByRedis.getInstance();
 							String docId=generateDocIdService.getDocId(url, title, content);
 							result.put("docId", docId);
@@ -97,10 +102,18 @@ public class JSONDocIdServlet extends HttpServlet {
 							newsInfo.setUrl(url);
 							newsInfo.setTitle(title);
 							newsInfo.setIntroduce(introduce);
-							String docId=generateNewsDocIdService.getDocId(newsInfo);
-							result.put("docId", docId);
+							if(imageCount!=null && media!=null)
+							{
+								String docId=generateNewsDocIdService.getDocId(newsInfo);
+								FilterReason  filterReason=filterNews(url, title, content, sort, imageCount, media);
+								result.put("filterStatus", filterReason.getStatus());
+								result.put("filterReason", filterReason.getReason());
+								result.put("docId", docId);
+							}else{
+								result.put("status", "fail");
+								result.put("msg", "imageCount or media is null");
+							}
 						}
-						
 					}else{
 						// url 或者 title 为空
 						result.put("status", "fail");
@@ -125,7 +138,7 @@ public class JSONDocIdServlet extends HttpServlet {
 	 * 向前端写入数据
 	 * @throws IOException
 	 */
-	public void write2Client(String vlaue, HttpServletResponse response) {
+	private void write2Client(String vlaue, HttpServletResponse response) {
 		PrintWriter out;
 		try {
 			out = response.getWriter();
@@ -135,5 +148,24 @@ public class JSONDocIdServlet extends HttpServlet {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	public FilterReason   filterNews(String url,String title,String content,String sort,String imageCount,String media){
+		String distanceURL="http://10.16.44.236:8080/text_classification/getNewsClassification";
+		HashMap<String,String>  map=new HashMap<String,String>();
+		map.put("title", title);
+		map.put("url", url);
+		map.put("content", content);
+		map.put("sort", sort);
+		map.put("imageCount", imageCount);
+		map.put("media", media);
+		String result=HttpClientUtil.doPost(distanceURL, map, "utf-8");
+		JSONObject  json=JSONObject.parseObject(result);
+		FilterReason filterReason= new FilterReason();
+		String reson=json.getString("reason");
+		String status=json.getString("status");
+		LOG.info("过滤接口返回的内容  "+result);
+		filterReason.setReason(reson);
+		filterReason.setStatus(status);
+		return filterReason;
 	}
 }

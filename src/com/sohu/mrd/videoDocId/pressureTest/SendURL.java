@@ -32,10 +32,13 @@ public class SendURL {
 		json.put("title", " 标题");
 		json.put("content", "内容");
 		json.put("category", "2");
+		json.put("sort", "41");
+		json.put("media", "sohu");
+		json.put("imageCount", "3");
 		HashMap<String,String>  map=new HashMap<String,String>();
 		map.put("json", json.toJSONString());
 		long startTime=System.currentTimeMillis();
-		String result=HttpClientUtil.doPost(ngixDocId6, map, "utf-8");
+		String result=HttpClientUtil.doPost(local, map, "utf-8");
 		long endTime=System.currentTimeMillis();
 		System.out.println("时间为 "+(endTime-startTime));
 		LOG.info("result "+result);
@@ -57,7 +60,6 @@ public class SendURL {
 //		String docId= resultJson.getString("docId");
 //		LOG.info("docId "+docId);
 	}
-	
 	@Test
 	public void testRedis()
 	{
