@@ -23,6 +23,16 @@ public class RedisCrud {
 		codisLocalClient.set(key, value);
 	}
 	
+	/**
+	 * 设置缓存set
+	 * @param key
+	 * @return
+	 */
+	public static void setCach(String key,String value)
+	{
+		codisLocalClient.set(key,value);
+		codisLocalClient.expire(key, 60*60*24*7);//过期时间为1个星期
+	}
 	public static String  get(String key)
 	{
 		return codisLocalClient.get(key);

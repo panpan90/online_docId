@@ -26,15 +26,16 @@ public class SendURL {
 		String ngixDocId="http://10.10.120.135:8080/online_docId/getDocId";
 		String ngixDocId5="http://10.16.44.237:8080/online_docId/getDocId";
 		String ngixDocId6="http://10.16.44.236:8080/online_docId/getDocId";
-		String ngixDocId2="http://service1.mrd.sohuno.com/online_docId/getDocId";
+		String ngixDocId8="http://10.16.44.238:8080/online_docId/getDocId";
+		String ngixDocId11="http://service1.mrd.sohuno.com/online_docId/getDocId";
 		JSONObject  json=new JSONObject();
-		json.put("url", "http://www.baidu.com/");
-		json.put("title", " 标题");
-		json.put("content", "内容");
-		json.put("category", "2");
+		json.put("url", "http://www.baidu.com/xxx");
+		json.put("title", "标题现货");
+		json.put("content", "内容adfafda内容内容sdfsasd");
+		json.put("category", "0");//新闻
 		json.put("sort", "41");
 		json.put("media", "sohu");
-		json.put("imageCount", "3");
+		json.put("imageCount", "9");
 		HashMap<String,String>  map=new HashMap<String,String>();
 		map.put("json", json.toJSONString());
 		long startTime=System.currentTimeMillis();
@@ -60,6 +61,38 @@ public class SendURL {
 //		String docId= resultJson.getString("docId");
 //		LOG.info("docId "+docId);
 	}
+	
+	@Test
+	public void timeOut()
+	{
+		String ngixDocId8="http://10.16.44.238:8080/online_docId/getDocId";
+		String local="http://localhost:8080/online_docId/getDocId";
+	  //String title="体育招聘|体育大生意新年第一波招聘!另有北上广12家公司48个岗位";
+	  String title="早读|每天三分钟 尽览现货事(2月10日)测试标题";
+	  //String contentURL= "http://service.k.sohu.com/server/interface/readinfo.go?aid=1001&date=2013-07-25&ids=176733764_1&token=9e2e0350c8f8aa0db78ef6cbe70dc6fa";
+	  long contentTimeStart=System.currentTimeMillis();
+	  String url="http://service.k.sohu.com/server/interface/jinguopan/readinfo.go?aid=1001&date=2013-07-25&ids=176726199_1&token=9e2e0350c8f8aa0db78ef6cbe70dc6fa";
+	  String contentURL="http://service.k.sohu.com/server/interface/readinfo.go?aid=1001&date=2013-07-25&ids=176726199_1&token=9e2e0350c8f8aa0db78ef6cbe70dc6fa";
+	  String content=HttpClientUtil.executeGet(contentURL);
+	  long contentTimeEnd=System.currentTimeMillis();
+	  System.out.println("contentTiem "+(contentTimeEnd-contentTimeStart));
+	  JSONObject  json=new JSONObject();
+	  json.put("url", url);
+	  json.put("title", title);
+	  json.put("content", content);
+	  json.put("category", "0");//新闻
+	  json.put("sort", "41");
+	  json.put("media", "sohu");
+	  json.put("imageCount", "9");
+		HashMap<String,String>  map=new HashMap<String,String>();
+		map.put("json", json.toJSONString());
+		long startTime=System.currentTimeMillis();
+		String result=HttpClientUtil.doPost(ngixDocId8, map, "utf-8");
+		long endTime=System.currentTimeMillis();
+		System.out.println("时间为 "+(endTime-startTime));
+		LOG.info("result "+result);
+	}
+	
 	@Test
 	public void testRedis()
 	{

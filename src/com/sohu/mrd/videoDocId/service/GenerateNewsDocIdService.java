@@ -28,7 +28,7 @@ public class GenerateNewsDocIdService{
 	{
 		return InstanceHolder.generateNewsDocIdService;
 	}
-	public synchronized  String  getDocId(NewsInfo newsInfo)
+	public   String  getDocId(NewsInfo newsInfo)
 	{
 		String docId ="";
 		String url=newsInfo.getUrl();
@@ -46,7 +46,7 @@ public class GenerateNewsDocIdService{
 			LOG.info("新闻docId start");
 			url_index_table=RedisConstant.KEY_PREFIX_NEWS_URL_INDEX_TABLE;
 			title_index_table=RedisConstant.KEY_PREFIX_NEWS_TITLE_INDEX_TABLE;
-			content_index_table=RedisConstant.KEY_PREFIX_VIDEO_CONTENT_INDEX_TABLE;
+			content_index_table=RedisConstant.KEY_PREFIX_NEWS_content_INDEX_TABLE;
 			LOG.info("索引表  url_index_table "+url_index_table+" title_index_table "+title_index_table+" content_index_table  "+content_index_table);
 		}else if(category.equals("2"))
 		{
@@ -56,49 +56,65 @@ public class GenerateNewsDocIdService{
 			content_index_table=RedisConstant.WEIXIN_PREFIX_CONTENT_INDEX_TABLE;
 			LOG.info("索引表为  url_index_table  "+url_index_table+" title_index_table  "+title_index_table+" content_index_table "+content_index_table);
 		}
-		//通过url排重
-		NewsURLDuplicate  newsURLDuplicate = new NewsURLDuplicate();
-		String urlFlag=newsURLDuplicate.duplicatebyURL(url,url_index_table);
-		NewsTitleDuplicate  newTitleDuplicate = new NewsTitleDuplicate();
-		String clearTitle=title.trim();
-		String titleFlag=newTitleDuplicate.duplicateByTitle(clearTitle,title_index_table);
-		if(urlFlag.equals(Constant.DUPLICATE_FLAG)) //url 没有重复的
+		synchronized(GenerateNewsDocIdService.class)  //如果超时，取消同步
 		{
-			if(titleFlag.equals(Constant.DUPLICATE_FLAG)) //标题没有重复的
+			long urlStartTime=System.currentTimeMillis();
+			//通过url排重
+			NewsURLDuplicate  newsURLDuplicate = new NewsURLDuplicate();
+			String urlFlag=newsURLDuplicate.duplicatebyURL(url,url_index_table);
+			long urlEndTime=System.currentTimeMillis();
+			LOG.info("url排重需要的时间  "+(urlEndTime-urlStartTime));
+			if(urlFlag.equals(Constant.DUPLICATE_FLAG)) //url 没有重复的
 			{
-				NewsContentDuplicate newsContentDupicate = new NewsContentDuplicate();
-				String realContent=introduce+content;
-				String pureContent=KillPuctuation.killPuctuation(KillTag.killTags(realContent)) ;
-				SimHasher simHasher = new SimHasher(pureContent);
-				String simHash =simHasher.getHash();
-				String contentFlag=newsContentDupicate.duplicateByContent(simHash, clearTitle,content_index_table);
-				if(contentFlag.equals(Constant.DUPLICATE_FLAG))//没有重复的
+				long titleStartTime=System.currentTimeMillis();
+				NewsTitleDuplicate  newTitleDuplicate = new NewsTitleDuplicate();
+				String clearTitle=title.trim();
+				String titleFlag=newTitleDuplicate.duplicateByTitle(clearTitle,title_index_table);
+				long titleEndTime=System.currentTimeMillis();
+				LOG.info("标题排重需要的时间  "+(titleEndTime-titleStartTime));
+				if(titleFlag.equals(Constant.DUPLICATE_FLAG)) //标题没有重复的
 				{
-					//产生docId
-					String newDocId=generateDocId(url);
-					//建立url索引
-					buildURLIndex(url, newDocId,url_index_table);
-					//构建标题索引
-					buildTitleIndex(clearTitle, newDocId, url,title_index_table);
-					//建立simhash索引
-					buildContenIndex(newDocId, simHash, clearTitle,url,content_index_table);
-					docId = newDocId;
-					return docId;
-				}else{//通过内容相似进行的排重
-					docId=contentFlag;
-					buildURLIndex(url, docId,url_index_table);
-					buildTitleIndex(clearTitle, docId, url,title_index_table);
-					LOG.info("通过content 进行排重的url 为 "+url);
+					long contentStartTime=System.currentTimeMillis();
+					NewsContentDuplicate newsContentDupicate = new NewsContentDuplicate();
+					String realContent=introduce+content;
+					String pureContent=KillPuctuation.killPuctuation(KillTag.killTags(realContent)) ;
+					SimHasher simHasher = new SimHasher(pureContent);
+					String simHash =simHasher.getHash();
+					String contentFlag=newsContentDupicate.duplicateByContent(simHash, clearTitle,content_index_table);
+					long contentEndTime=System.currentTimeMillis();
+					long contentTime = (contentEndTime-contentStartTime);
+					LOG.info("内容排重需要的时间 "+contentTime+" url "+url);
+					if(contentFlag.equals(Constant.DUPLICATE_FLAG))//没有重复的
+					{
+						long newDocIdStartTime = System.currentTimeMillis();
+						//产生docId
+						String newDocId=generateDocId(url);
+						//建立url索引
+						buildURLIndex(url, newDocId,url_index_table);
+						//构建标题索引
+						buildTitleIndex(clearTitle, newDocId, url,title_index_table);
+						//建立simhash索引
+						buildContenIndex(newDocId, simHash, clearTitle,url,content_index_table);
+						long newDocIdEndTime = System.currentTimeMillis();
+						LOG.info("新建docId 需要的时间  "+(newDocIdEndTime-newDocIdStartTime));
+						docId = newDocId;
+						return docId;
+					}else{//通过内容相似进行的排重
+						docId=contentFlag;
+						buildURLIndex(url, docId,url_index_table);
+						buildTitleIndex(clearTitle, docId, url,title_index_table);
+						LOG.info("通过content 进行排重的url 为 "+url);
+						return docId;
+					}
+				}else{ //标题重复
+					docId=titleFlag;
+					LOG.info("通过title重复排重  要排重的原始url为"+url);
 					return docId;
 				}
-			}else{ //标题重复
-				docId=titleFlag;
-				LOG.info("通过title重复排重  要排重的原始url为"+url);
+			}else{
+				docId=urlFlag;
 				return docId;
 			}
-		}else{
-			docId=urlFlag;
-			return docId;
 		}
 	}
 	//构建标题 docId索引
@@ -166,5 +182,4 @@ public class GenerateNewsDocIdService{
 		urlInfo.setDomain(domain);
 		return urlInfo;
 	}
-	
 }

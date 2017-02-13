@@ -14,6 +14,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.sohu.mrd.videoDocId.model.FilterReason;
 import com.sohu.mrd.videoDocId.model.NewsInfo;
+import com.sohu.mrd.videoDocId.redis.RedisCrud;
 import com.sohu.mrd.videoDocId.service.GenerateDocIdServiceByRedis;
 import com.sohu.mrd.videoDocId.service.GenerateNewsDocIdService;
 import com.sohu.mrd.videoDocId.utils.HttpClientUtil;
@@ -23,6 +24,7 @@ import com.sohu.mrd.videoDocId.utils.HttpClientUtil;
  */
 public class JSONDocIdServlet extends HttpServlet {
 	private static final Logger LOG = Logger.getLogger(JSONDocIdServlet.class);
+	private static final String CACH_PREFIX="online_new_docId_result_cach_";
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		this.doPost(request, response);
@@ -104,11 +106,27 @@ public class JSONDocIdServlet extends HttpServlet {
 							newsInfo.setIntroduce(introduce);
 							if(imageCount!=null && media!=null)
 							{
-								String docId=generateNewsDocIdService.getDocId(newsInfo);
-								FilterReason  filterReason=filterNews(url, title, content, sort, imageCount, media);
-								result.put("filterStatus", filterReason.getStatus());
-								result.put("filterReason", filterReason.getReason());
-								result.put("docId", docId);
+								    String cachResult=RedisCrud.get(CACH_PREFIX+url);
+								    if(cachResult==null)
+								    {
+								    	long docIdStartTime=System.currentTimeMillis();
+								    	String docId=generateNewsDocIdService.getDocId(newsInfo);
+								    	long docIdEndTime=System.currentTimeMillis();
+								    	LOG.info("docId 排重需要的时间  "+(docIdEndTime-docIdStartTime));
+										FilterReason  filterReason=filterNews(url, title, content, sort, imageCount, media);
+										result.put("filterStatus", filterReason.getStatus());
+										result.put("filterReason", filterReason.getReason());
+										result.put("docId", docId);
+										//把超时的放入缓存里面
+										RedisCrud.setCach(CACH_PREFIX+url, result.toJSONString());
+								    }else{
+								    	//从缓存中取得结果
+								    	LOG.info("[从缓存中取得结果]向前端返回的结果  reslut "+cachResult);
+								    	LOG.info("url "+url+" title "+title);
+										write2Client(cachResult,response);
+										return;
+								    }
+									
 							}else{
 								result.put("status", "fail");
 								result.put("msg", "imageCount or media is null");
@@ -119,7 +137,6 @@ public class JSONDocIdServlet extends HttpServlet {
 						result.put("status", "fail");
 						result.put("msg", "category is empty");
 					}
-					
 				}else{
 					// url 或者 title 为空
 					result.put("status", "fail");
@@ -149,6 +166,10 @@ public class JSONDocIdServlet extends HttpServlet {
 			e.printStackTrace();
 		}
 	}
+	/**
+	 * http://10.16.44.236:8080/text_classification/getNewsClassification
+	 * http://10.16.44.239:8080/text_classification/getNewsClassification
+	 */
 	public FilterReason   filterNews(String url,String title,String content,String sort,String imageCount,String media){
 		String distanceURL="http://10.16.44.236:8080/text_classification/getNewsClassification";
 		HashMap<String,String>  map=new HashMap<String,String>();
@@ -163,7 +184,7 @@ public class JSONDocIdServlet extends HttpServlet {
 		FilterReason filterReason= new FilterReason();
 		String reson=json.getString("reason");
 		String status=json.getString("status");
-		LOG.info("过滤接口返回的内容  "+result);
+		LOG.info("236 接口 过滤接口返回的内容  "+result);
 		filterReason.setReason(reson);
 		filterReason.setStatus(status);
 		return filterReason;
